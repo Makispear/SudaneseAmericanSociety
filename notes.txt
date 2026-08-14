@@ -1,0 +1,8 @@
+Hash passwords with bcrypt/Argon2, never store plaintext.
+Enforce a reasonable password policy.
+Don't return password_hash in API responses.
+Rate-limit registration.
+Rate-limit login much more aggressively.
+Implement email verification.
+Implement password reset.
+Consider account lockout/throttling for repeated failed logins.
