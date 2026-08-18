@@ -6,7 +6,7 @@ import {
 } from "../helpers/SQL/queries/createAccountQuery.js";
 import deleteAccountQuery from "../helpers/SQL/queries/deleteAccountQuery.js";
 import getAllusersQuery from "../helpers/SQL/queries/getAllUsers.js";
-import { validate } from "../helpers/validators.js";
+import { validate, validateEmail } from "../helpers/validators.js";
 
 export const getAllUsers = async (req, res) => {
   try {
@@ -19,6 +19,7 @@ export const getAllUsers = async (req, res) => {
       data: allUsers.rows,
     });
   } catch (error) {
+    console.log("error:", error);
     return res.status(500).json({
       success: false,
       statusCode: 500,
@@ -55,38 +56,59 @@ export const createAccount = async (req, res) => {
     hashedPassword,
   ];
 
-  const sql_to_create_user = await pool.query(createAccountQuery, params);
+  validateEmail(email);
 
-  const primaryMemberId = sql_to_create_user.rows[0].id;
-  const childParams = [];
-  if (membershipType === "Family") {
-    for (const {
-      childFirstName,
-      childLastName,
-      childGender,
-      childDoB,
-      relationship,
-    } of familyMembers) {
-      const childParams = [
-        primaryMemberId,
+  const client = await pool.connect();
+  await client.query("BEGIN");
+  try {
+    const sql_to_create_user = await client.query(createAccountQuery, params);
+    const primaryMemberId = sql_to_create_user.rows[0].id;
+
+    if (membershipType === "Family") {
+      for (const {
         childFirstName,
         childLastName,
         childGender,
         childDoB,
         relationship,
-      ];
-      await pool.query(addDependants, childParams);
+      } of familyMembers) {
+        const childParams = [
+          primaryMemberId,
+          childFirstName,
+          childLastName,
+          childGender,
+          childDoB,
+          relationship,
+        ];
+        // todo: validate (one spouse for example, kids age? optional phone or email.)
+        // vaidateDependantsList
+        const sql_to_create_dependants = await client.query(
+          addDependants,
+          childParams,
+        );
+      }
     }
-  }
-  // const sql_to_create_dependants = await pool.query(addDependants, childParams);
+    await client.query("COMMIT");
+    return res.status(200).json({
+      success: true,
+      statusCode: 200,
+      message: "Created Account Successfully.",
+      results: sql_to_create_user.rows.length,
+      data: sql_to_create_user.rows,
+    });
+  } catch (error) {
+    await client.query("ROLLBACK");
 
-  return res.status(200).json({
-    success: true,
-    statusCode: 200,
-    message: "Created Account Successfully.",
-    results: sql_to_create_user.rows.length,
-    data: sql_to_create_user.rows,
-  });
+    console.error(error);
+
+    return res.status(500).json({
+      success: false,
+      statusCode: 500,
+      message: "Failed to create account.",
+    });
+  } finally {
+    client.release();
+  }
 };
 
 export const deleteAccount = async (req, res) => {

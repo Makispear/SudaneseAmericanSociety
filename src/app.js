@@ -1,7 +1,6 @@
 import express from "express";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
-import testConnection, { pool } from "./config/db.js";
 import accountRoutes from "./routes/accounts.js";
 
 const limiter = rateLimit({
@@ -12,8 +11,8 @@ const limiter = rateLimit({
 
 const app = express();
 
-//  DATABASE CONNECTION
-testConnection();
+// Because express-rate-limit needs Express to already understand that it's behind a proxy before the limiter processes requests.
+app.set("trust proxy", 1);
 
 // MIDDLEWARE
 app.use(helmet());

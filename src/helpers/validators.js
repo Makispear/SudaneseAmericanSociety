@@ -1,3 +1,6 @@
+import validator from "validator";
+
+const { isEmail, normalizeEmail } = validator;
 const validate = (apiName, req) => {
   if (apiName == "createAccount") {
     const {
@@ -36,9 +39,8 @@ const validate = (apiName, req) => {
         message:
           "family members list cannot be empty when selecting family membership type. Provide at least one family member or switch to individual memebership.",
       };
-    }
-    else if (membershipType === "Family" && familyMembers.length > 0) {
-      //  todo : 
+    } else if (membershipType === "Family" && familyMembers.length > 0) {
+      //  todo :
       // check if there's more than one spouse.
       // we don't care if they're married.
       // check if there's the same person twice (2 ahmed's as children)
@@ -51,6 +53,29 @@ const validate = (apiName, req) => {
   }
 };
 
-module.exports = {
-  validate,
+const validateEmail = (rawEmail) => {
+  if (typeof rawEmail !== "string") {
+    throw new Error("Invalid input: Email must be a string");
+  }
+  const trimmed = rawEmail.trim();
+
+  if (!isEmail(trimmed)) {
+    throw new Error("Invalid email format");
+  }
+  const normalizedEmail = normalizeEmail(trimmed, {
+    all_lowercase: true,
+    gmail_lowercase: true,
+    gmail_remove_dots: false, // Set to false if you want to preserve user dot preferences
+    gmail_remove_subaddress: true, // Strips +tag from Gmail addresses
+    outlook_lowercase: true,
+    outlook_remove_subaddress: true,
+    yahoo_lowercase: true,
+    yahoo_remove_subaddress: true,
+    icloud_lowercase: true,
+    icloud_remove_subaddress: true,
+  });
+
+  return normalizedEmail;
 };
+
+export { validate, validateEmail };
