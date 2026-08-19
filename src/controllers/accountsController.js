@@ -9,8 +9,9 @@ import getAllusersQuery from "../helpers/SQL/queries/getAllUsers.js";
 import { validate, validateEmail } from "../helpers/validators.js";
 
 export const getAllUsers = async (req, res) => {
+  const client = await pool.connect();
   try {
-    const allUsers = await pool.query(getAllusersQuery);
+    const allUsers = await client.query(getAllusersQuery);
     return res.status(200).json({
       success: true,
       statusCode: 200,
@@ -59,8 +60,8 @@ export const createAccount = async (req, res) => {
   validateEmail(email);
 
   const client = await pool.connect();
-  await client.query("BEGIN");
   try {
+    await client.query("BEGIN");
     const sql_to_create_user = await client.query(createAccountQuery, params);
     const primaryMemberId = sql_to_create_user.rows[0].id;
 
@@ -99,7 +100,7 @@ export const createAccount = async (req, res) => {
   } catch (error) {
     await client.query("ROLLBACK");
 
-    console.error(error);
+    console.error("ERROR: ", error);
 
     return res.status(500).json({
       success: false,
