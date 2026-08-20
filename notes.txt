@@ -10,3 +10,18 @@ dead-letter queue (for async events. Send error there?)
 Compress-Archive -Path lambda.js,package.json,package-lock.json,src,node_modules -DestinationPath lambda-deployment.zip -Force
 
 errors must be visible in cloudwatch but now in response.
+
+
+
+| Trigger                | What it does                        | How likely you need it |
+| ---------------------- | ----------------------------------- | ---------------------- |
+| 📧 Verification email  | Send email verification             | **Very likely**        |
+| 📱 Phone verification  | Send SMS/OTP                        | Likely                 |
+| 👋 Welcome email       | Welcome/onboarding message          | Likely                 |
+| 📊 Analytics           | Record signup/conversion event      | Common                 |
+| 📝 Audit log           | Record that an account was created  | **Good idea**          |
+| 🎯 Onboarding          | Create initial preferences/settings | Common                 |
+| 💳 Subscription setup  | Prepare billing/customer record     | **Relevant to you**    |
+| 🔔 Notifications       | Notify staff/admins of new members  | Possible               |
+| 🛡️ Fraud/risk checks  | Analyze suspicious registrations    | More advanced          |
+| 🎁 Membership benefits | Initialize discounts/benefits       | Depends on your app    |

@@ -1,3 +1,4 @@
+drop table if exists public.email_verification_tokens;
 drop table if exists public.dependants;
 DROP TABLE IF EXISTS public.users;
 
@@ -45,3 +46,12 @@ create table if not exists public.dependants (
 	CONSTRAINT dependents_public_id_key UNIQUE (public_id)
 );
 
+
+CREATE TABLE IF NOT EXISTS public.email_verification_tokens (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    user_id BIGINT NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    token_hash VARCHAR(255) NOT NULL,
+    expires_at TIMESTAMPTZ NOT NULL,
+    used_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);

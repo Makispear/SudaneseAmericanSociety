@@ -5,6 +5,7 @@ const router = express.Router();
 
 router.get("/getAllUsers", accountsController.getAllUsers);
 router.post("/createAccount", accountsController.createAccount);
+router.post("/sendVerificationEmail", accountsController.sendVerificationEmail);
 router.delete("/deleteAccount", accountsController.deleteAccount);
 
 export default router;
