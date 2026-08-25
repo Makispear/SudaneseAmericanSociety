@@ -1,7 +1,9 @@
 import bcrypt from "bcrypt";
 import crypto from "crypto";
 import { pool } from "../config/db.js";
-import { sendVerificationEmail as sendEmail } from "../services/emailService.js";
+
+import { publishUserCreatedEvent } from "../services/eventServices.js";
+import { sendVerificationEmail as sendEmail } from "../../send-verification-email/src/services/emailService.js";
 
 import {
   createAccountQuery,
@@ -72,6 +74,17 @@ export const createAccount = async (req, res) => {
     await client.query("BEGIN");
     const sql_to_create_user = await client.query(createAccountQuery, params);
     const primaryMemberId = sql_to_create_user.rows[0].id;
+    const verificationToken = generateVerificationToken();
+    const tokenHash = hashVerificationToken(verificationToken);
+
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+
+    await client.query(
+      `INSERT INTO email_verification_tokens
+    (user_id, token_hash, expires_at)
+   VALUES ($1, $2, $3)`,
+      [primaryMemberId, tokenHash, expiresAt],
+    );
 
     if (membershipType === "Family") {
       for (const {
@@ -98,6 +111,12 @@ export const createAccount = async (req, res) => {
       }
     }
     await client.query("COMMIT");
+    // todo: what if the publish failed?
+    await publishUserCreatedEvent({
+      userId: primaryMemberId,
+      email,
+      verificationToken,
+    });
     return res.status(200).json({
       success: true,
       statusCode: 200,
@@ -235,6 +254,119 @@ export const deleteAccount = async (req, res) => {
   const params = [public_id];
 
   const result = pool.query(deleteAccountQuery, params);
+};
+
+export const verifyEmail = async (req, res) => {
+  const { token } = req.query;
+
+  console.log("Email verification requested.");
+
+  if (!token) {
+    return res.status(400).json({
+      success: false,
+      statusCode: 400,
+      message: "Verification token is required.",
+    });
+  }
+  const now = new Date();
+
+  console.log("Verification token received.");
+  const tokenHash = hashVerificationToken(token);
+
+  const client = await pool.connect();
+
+  try {
+    const tokenResult = await client.query(
+      `
+        SELECT id, user_id, expires_at
+        FROM public.email_verification_tokens
+        WHERE token_hash = $1
+          AND used_at IS NULL
+        LIMIT 1;
+      `,
+      [tokenHash],
+    );
+
+    if (tokenResult.rows.length === 0) {
+      return res.status(400).json({
+        success: false,
+        statusCode: 400,
+        message: "Invalid or expired verification link.",
+      });
+    }
+
+    const verificationToken = tokenResult.rows[0];
+
+    console.log("Verification token found. Token ID:", verificationToken.id);
+    const expiresAt = new Date(verificationToken.expires_at);
+
+    if (expiresAt <= now) {
+      console.log(
+        "Verification token expired. Token ID:",
+        verificationToken.id,
+      );
+
+      return res.status(400).json({
+        success: false,
+        statusCode: 400,
+        message: "Invalid or expired verification link.",
+      });
+    }
+    const updateUserResult = await client.query(
+      `
+    UPDATE public.users
+    SET is_email_verified = true
+    WHERE id = $1
+    RETURNING id, email, is_email_verified;
+  `,
+      [verificationToken.user_id],
+    );
+
+    if (updateUserResult.rows.length === 0) {
+      console.log(
+        "No user found for verification token. Token ID:",
+        verificationToken.id,
+      );
+
+      return res.status(400).json({
+        success: false,
+        statusCode: 400,
+        message: "Invalid or expired verification link.",
+      });
+    }
+
+    const verifiedUser = updateUserResult.rows[0];
+
+    console.log("Email successfully verified for user:", verifiedUser.id);
+    await client.query(
+      `
+    UPDATE public.email_verification_tokens
+    SET used_at = NOW()
+    WHERE id = $1;
+  `,
+      [verificationToken.id],
+    );
+
+    console.log(
+      "Verification token marked as used. Token ID:",
+      verificationToken.id,
+    );
+    return res.status(200).json({
+      success: true,
+      statusCode: 200,
+      message: "Email verified successfully.",
+    });
+  } catch (error) {
+    console.error("Email verification error:", error);
+
+    return res.status(500).json({
+      success: false,
+      statusCode: 500,
+      message: "Failed to verify email.",
+    });
+  } finally {
+    client.release();
+  }
 };
 
 // todo:
