@@ -2,8 +2,10 @@ import bcrypt from "bcrypt";
 import crypto from "crypto";
 import { pool } from "../config/db.js";
 
-import { publishUserCreatedEvent } from "../services/eventServices.js";
-import { sendVerificationEmail as sendEmail } from "../../send-verification-email/src/services/emailService.js";
+import {
+  publishUserCreatedEvent,
+  publishVerificationEmailRequestedEvent,
+} from "../services/eventServices.js";
 
 import {
   createAccountQuery,
@@ -218,8 +220,9 @@ export const sendVerificationEmail = async (req, res) => {
     ]);
 
     console.log("Verification token saved. Token ID:", tokenResult.rows[0].id);
-    await sendEmail({
-      to: user.email,
+    await publishVerificationEmailRequestedEvent({
+      userId: user.user_id,
+      email: user.email,
       verificationToken: emailVerificationToken,
     });
     console.log("Verification email sent successfully.");

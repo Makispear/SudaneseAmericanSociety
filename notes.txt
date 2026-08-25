@@ -28,3 +28,29 @@ I have email_verified_at and is_email_verified. They can be reduced to one maybe
 | 🔔 Notifications       | Notify staff/admins of new members  | Possible               |
 | 🛡️ Fraud/risk checks  | Analyze suspicious registrations    | More advanced          |
 | 🎁 Membership benefits | Initialize discounts/benefits       | Depends on your app    |
+
+### Account/Auth API Roadmap
+
+* [x] Create Account
+* [x] Verify Email
+* [ ] Login
+* [ ] Forgot Password
+* [ ] Reset Password
+* [ ] Logout
+* [ ] Get My Account
+* [ ] Update Profile
+* [ ] Change Password
+* [ ] Change Email
+* [ ] Verify New Email
+* [ ] Get Dependents
+* [ ] Add Dependent
+* [ ] Update Dependent
+* [ ] Remove Dependent
+* [ ] Refresh Token
+* [ ] Session Management
+* [ ] Logout Everywhere
+* [ ] Deactivate Account
+* [ ] Delete Account
+
+**Next:** Memberships → Payments → Subscriptions → Admin
+

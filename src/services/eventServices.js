@@ -28,3 +28,25 @@ export const publishUserCreatedEvent = async ({
 
   return await eventBridgeClient.send(command);
 };
+
+export const publishVerificationEmailRequestedEvent = async ({
+  userId,
+  email,
+  verificationToken,
+}) => {
+  const command = new PutEventsCommand({
+    Entries: [
+      {
+        Source: "sudanese-american-society.accounts",
+        DetailType: "Verification Email Requested",
+        Detail: JSON.stringify({
+          userId,
+          email,
+          verificationToken,
+        }),
+      },
+    ],
+  });
+
+  return await eventBridgeClient.send(command);
+};
