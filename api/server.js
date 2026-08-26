@@ -1,5 +1,4 @@
 import dotenv from 'dotenv';
-// 💡 FIX: Use import instead of require, and specify the file path correctly
 import app from './src/app.js'; 
 
 // Initialize environment variables
