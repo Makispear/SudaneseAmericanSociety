@@ -51,6 +51,17 @@ const validate = (apiName, req) => {
     }
     return null;
   }
+  if (apiName == "login") {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      return {
+        success: false,
+        statusCode: 400,
+        error: "ValidationError",
+        message: "Missing required fields. Email and password are required.",
+      };
+    }
+  }
 };
 
 const validateEmail = (rawEmail) => {

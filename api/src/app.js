@@ -1,13 +1,8 @@
 import express from "express";
 import helmet from "helmet";
-import rateLimit from "express-rate-limit";
 import accountRoutes from "./routes/accounts.js";
-
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  limit: 100,
-});
-// TODO: create more limits for APIs
+import authRoutes from "./routes/auth.js";
+import { generalRateLimiter } from "./middleware/rateLimiter.js";
 
 const app = express();
 
@@ -16,7 +11,7 @@ app.set("trust proxy", 1);
 
 // MIDDLEWARE
 app.use(helmet());
-app.use(limiter);
+app.use(generalRateLimiter);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -27,5 +22,6 @@ app.get("/", (req, res) => {
 
 // API ROUTES
 app.use("/api/accounts", accountRoutes);
+app.use("/api/auth", authRoutes);
 
 export default app;

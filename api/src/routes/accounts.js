@@ -3,10 +3,14 @@ import * as accountsController from "../controllers/accountsController.js";
 
 const router = express.Router();
 
-router.get("/getAllUsers", accountsController.getAllUsers);
-router.post("/verifyEmail", accountsController.verifyEmail);
+// POST ROUTES
 router.post("/createAccount", accountsController.createAccount);
+router.post("/verifyEmail", accountsController.verifyEmail);
 router.post("/sendVerificationEmail", accountsController.sendVerificationEmail);
+// GET ROUTES
+router.get("/getAllUsers", accountsController.getAllUsers);
+// DELETE ROUTES
 router.delete("/deleteAccount", accountsController.deleteAccount);
+// PUT ROUTES
 
 export default router;

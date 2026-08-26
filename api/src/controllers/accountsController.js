@@ -1,5 +1,4 @@
 import bcrypt from "bcrypt";
-import crypto from "crypto";
 import { pool } from "../config/db.js";
 
 import {
@@ -58,18 +57,17 @@ export const createAccount = async (req, res) => {
     familyMembers = [],
   } = req.body;
 
+  const normalizedEmail = validateEmail(email);
   const hashedPassword = await bcrypt.hash(password, 12);
   const params = [
     firstName,
     lastName,
     gender,
-    email,
+    normalizedEmail,
     phone,
     membershipType,
     hashedPassword,
   ];
-
-  validateEmail(email);
 
   const client = await pool.connect();
   try {
@@ -116,7 +114,7 @@ export const createAccount = async (req, res) => {
     // todo: what if the publish failed?
     await publishUserCreatedEvent({
       userId: primaryMemberId,
-      email,
+      email: normalizedEmail,
       verificationToken,
     });
     return res.status(200).json({
