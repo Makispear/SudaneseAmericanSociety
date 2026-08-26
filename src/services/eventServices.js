@@ -12,6 +12,7 @@ export const publishUserCreatedEvent = async ({
   email,
   verificationToken,
 }) => {
+  console.log("EVENTBRIDGE RESULT:", JSON.stringify(eventResult, null, 2));
   const command = new PutEventsCommand({
     Entries: [
       {

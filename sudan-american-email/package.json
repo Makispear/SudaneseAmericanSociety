@@ -4,7 +4,7 @@
     "@aws-sdk/client-ses": "^3.1117.0",
     "dotenv": "^17.4.2"
   },
-  "name": "send-verification-email",
+  "name": "sudaneseAmericanEmail",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
