@@ -7,8 +7,8 @@ Consider account lockout/throttling for repeated failed logins.
 AWS Cognito? check it
 dead-letter queue (for async events. Send error there?)
 
-Compress-Archive -Path lambda.js,package.json,package-lock.json,src,node_modules -DestinationPath sudanese-american-society-api.zip -Force
-Compress-Archive -Path index.js,src,node_modules,package.json,package-lock.json -DestinationPath sudaneseAmericanEmail.zip -Force
+Compress-Archive -Path .\api\* -DestinationPath .\api.zip -Force
+Compress-Archive -Path .\email\* -DestinationPath .\email.zip -Force
 
 errors must be visible in cloudwatch but now in response.
 
