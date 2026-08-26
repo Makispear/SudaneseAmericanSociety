@@ -1,0 +1,56 @@
+Enforce a reasonable password policy.
+Rate-limit registration.
+Rate-limit login much more aggressively.
+Implement email verification.
+Implement password reset.
+Consider account lockout/throttling for repeated failed logins.
+AWS Cognito? check it
+dead-letter queue (for async events. Send error there?)
+
+Compress-Archive -Path .\api\* -DestinationPath .\api.zip -Force
+Compress-Archive -Path .\email\* -DestinationPath .\email.zip -Force
+
+errors must be visible in cloudwatch but now in response.
+
+I have email_verified_at and is_email_verified. They can be reduced to one maybe. Look into it.
+
+
+
+| Trigger                | What it does                        | How likely you need it |
+| ---------------------- | ----------------------------------- | ---------------------- |
+| 📧 Verification email  | Send email verification             | **Very likely**        |
+| 📱 Phone verification  | Send SMS/OTP                        | Likely                 |
+| 👋 Welcome email       | Welcome/onboarding message          | Likely                 |
+| 📊 Analytics           | Record signup/conversion event      | Common                 |
+| 📝 Audit log           | Record that an account was created  | **Good idea**          |
+| 🎯 Onboarding          | Create initial preferences/settings | Common                 |
+| 💳 Subscription setup  | Prepare billing/customer record     | **Relevant to you**    |
+| 🔔 Notifications       | Notify staff/admins of new members  | Possible               |
+| 🛡️ Fraud/risk checks  | Analyze suspicious registrations    | More advanced          |
+| 🎁 Membership benefits | Initialize discounts/benefits       | Depends on your app    |
+
+### Account/Auth API Roadmap
+
+* [x] Create Account
+* [x] Verify Email
+* [ ] Login
+* [ ] Forgot Password
+* [ ] Reset Password
+* [ ] Logout
+* [ ] Get My Account
+* [ ] Update Profile
+* [ ] Change Password
+* [ ] Change Email
+* [ ] Verify New Email
+* [ ] Get Dependents
+* [ ] Add Dependent
+* [ ] Update Dependent
+* [ ] Remove Dependent
+* [ ] Refresh Token
+* [ ] Session Management
+* [ ] Logout Everywhere
+* [ ] Deactivate Account
+* [ ] Delete Account
+
+**Next:** Memberships → Payments → Subscriptions → Admin
+
