@@ -1,3 +1,4 @@
+drop table if exists public.password_reset_tokens;
 drop table if exists public.email_verification_tokens;
 drop table if exists public.dependants;
 DROP TABLE IF EXISTS public.users;
@@ -54,4 +55,13 @@ CREATE TABLE IF NOT EXISTS public.email_verification_tokens (
     expires_at TIMESTAMPTZ NOT NULL,
     used_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE public.password_reset_tokens (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    token_hash TEXT NOT NULL,
+    expires_at TIMESTAMPTZ NOT NULL,
+    used_at TIMESTAMPTZ NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

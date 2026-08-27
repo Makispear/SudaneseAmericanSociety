@@ -62,6 +62,42 @@ const validate = (apiName, req) => {
       };
     }
   }
+  if (apiName == "forgotPassword") {
+    const { email } = req.body;
+    if (!email) {
+      return {
+        success: false,
+        statusCode: 400,
+        error: "ValidationError",
+        message: "Missing required field. Email is required.",
+      };
+    }
+  }
+
+  if (apiName == "changePassword") {
+    const { oldPassword, newPassword } = req.body;
+    if (!oldPassword || !newPassword) {
+      return {
+        success: false,
+        statusCode: 400,
+        error: "ValidationError",
+        message:
+          "Missing required fields. Old password and new password are required.",
+      };
+    }
+  }
+  if (apiName == "resetPassword") {
+    const { resetToken, newPassword } = req.body;
+    if (!newPassword || !resetToken) {
+      return {
+        success: false,
+        statusCode: 400,
+        error: "ValidationError",
+        message:
+          "Missing required fields. newPassword and resetToken are required.",
+      };
+    }
+  }
 };
 
 const validateEmail = (rawEmail) => {
@@ -89,4 +125,52 @@ const validateEmail = (rawEmail) => {
   return normalizedEmail;
 };
 
-export { validate, validateEmail };
+const validatePassword = (password, user) => {
+  if (typeof password !== "string") {
+    throw new Error("Invalid input: Password must be a string");
+  }
+
+  password = password.trim();
+
+  // can't contain first or last name
+  if (user) {
+    if (
+      password.includes(user.first_name) ||
+      password.includes(user.last_name)
+    ) {
+      throw new Error("Password cannot contain your first or last name");
+    }
+  }
+
+  if (password.length < 8) {
+    throw new Error("Password must be at least 8 characters long");
+  }
+
+  if (password.length > 128) {
+    throw new Error("Password must not exceed 128 characters");
+  }
+
+  // Check for at least one uppercase letter, one lowercase letter, one number, and one special character
+  if (!/[A-Z]/.test(password)) {
+    throw new Error("Password must contain at least one uppercase letter");
+  }
+
+  // Check for at least one lowercase letter
+  if (!/[a-z]/.test(password)) {
+    throw new Error("Password must contain at least one lowercase letter");
+  }
+
+  // Check for at least one number
+  if (!/[0-9]/.test(password)) {
+    throw new Error("Password must contain at least one number");
+  }
+
+  // Check for at least one special character
+  if (!/[^A-Za-z0-9]/.test(password)) {
+    throw new Error("Password must contain at least one special character");
+  }
+
+  return password;
+};
+
+export { validate, validateEmail, validatePassword };

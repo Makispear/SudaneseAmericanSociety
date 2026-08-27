@@ -16,7 +16,7 @@ export const publishUserCreatedEvent = async ({
     Entries: [
       {
         Source: "sudanese-american-society.accounts",
-        DetailType: "User Created",
+        DetailType: "EmailVerificationRequested",
         Detail: JSON.stringify({
           userId,
           email,
@@ -43,6 +43,30 @@ export const publishVerificationEmailRequestedEvent = async ({
           userId,
           email,
           verificationToken,
+        }),
+      },
+    ],
+  });
+
+  return await eventBridgeClient.send(command);
+};
+
+export const publishUserPasswordResetEvent = async ({
+  userId,
+  email,
+  firstName,
+  resetToken,
+}) => {
+  const command = new PutEventsCommand({
+    Entries: [
+      {
+        Source: "sudanese-american-society.api",
+        DetailType: "PasswordResetRequested",
+        Detail: JSON.stringify({
+          userId,
+          email,
+          firstName,
+          resetToken,
         }),
       },
     ],
