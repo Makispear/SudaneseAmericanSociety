@@ -9,6 +9,7 @@ import {
   getRefreshTokenExpiration,
   rotateRefreshToken,
   getRefreshTokenMaxAge,
+  revokeRefreshToken,
 } from "../services/tokenService.js";
 import {
   validate,
@@ -227,7 +228,7 @@ export const changePassword = async (req, res) => {
 
   const { oldPassword, newPassword } = req.body;
 
-  const userId = req.user.userId;
+  const userId = req.user.sub;
   const client = await pool.connect();
   try {
     const userResult = await client.query(
@@ -541,4 +542,33 @@ export const refreshToken = async (req, res) => {
       message: "Invalid or expired refresh token.",
     });
   }
+};
+
+export const logout = async (req, res) => {
+  const refreshToken = req.cookies.refreshToken;
+
+  if (refreshToken) {
+    try {
+      const tokenHash = hashRefreshToken(refreshToken);
+      const storedToken = await findRefreshToken(tokenHash);
+
+      if (storedToken && !storedToken.revoked_at) {
+        await revokeRefreshToken(storedToken.id);
+      }
+    } catch (error) {
+      console.error("ERROR:", error);
+    }
+  }
+
+  res.clearCookie("refreshToken", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+  });
+
+  return res.status(200).json({
+    success: true,
+    statusCode: 200,
+    message: "Logged out successfully.",
+  });
 };
