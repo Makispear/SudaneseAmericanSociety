@@ -1,5 +1,6 @@
 import express from "express";
 import helmet from "helmet";
+import cookieParser from "cookie-parser";
 import accountRoutes from "./routes/accounts.js";
 import authRoutes from "./routes/auth.js";
 import { generalRateLimiter } from "./middleware/rateLimiter.js";
@@ -10,6 +11,8 @@ const app = express();
 app.set("trust proxy", 1);
 
 // MIDDLEWARE
+
+app.use(cookieParser());
 app.use(helmet());
 app.use(generalRateLimiter);
 app.use(express.json());
@@ -23,5 +26,4 @@ app.get("/", (req, res) => {
 // API ROUTES
 app.use("/api/accounts", accountRoutes);
 app.use("/api/auth", authRoutes);
-
 export default app;

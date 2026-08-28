@@ -1,6 +1,16 @@
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import {
+  generateAccessToken,
+  generateRefreshToken,
+  hashRefreshToken,
+  saveRefreshToken,
+  findRefreshToken,
+  getRefreshTokenExpiration,
+  rotateRefreshToken,
+  getRefreshTokenMaxAge,
+} from "../services/tokenService.js";
+import {
   validate,
   validateEmail,
   validatePassword,
@@ -61,12 +71,18 @@ export const login = async (req, res) => {
     // todo: implement refresh token in future
 
     // generate JWT token
-    const token = jwt.sign(
-      { userId: user.id, email: user.email }, // payload
-      process.env.JWT_SECRET, // secret key
-      { expiresIn: "1h" }, // expiration time
-    );
+    const accessToken = generateAccessToken(user.id);
+    const refreshToken = generateRefreshToken(user.id);
+    const refreshTokenHash = hashRefreshToken(refreshToken);
+    const expiresAt = getRefreshTokenExpiration();
 
+    await saveRefreshToken(user.id, refreshTokenHash, expiresAt);
+    res.cookie("refreshToken", refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: getRefreshTokenMaxAge(),
+    });
     // update last_login_at in db
     await client.query(
       `
@@ -86,7 +102,7 @@ export const login = async (req, res) => {
         first_name: user.first_name,
         last_name: user.last_name,
         email: user.email,
-        token,
+        accessToken,
       },
     });
   } catch (error) {
@@ -432,5 +448,97 @@ export const resetPassword = async (req, res) => {
     });
   } finally {
     client.release();
+  }
+};
+
+// Refresh token endpoint
+export const refreshToken = async (req, res) => {
+  const refreshToken = req.cookies.refreshToken;
+
+  if (!refreshToken) {
+    return res.status(401).json({
+      success: false,
+      statusCode: 401,
+      message: "Refresh token is required.",
+    });
+  }
+
+  try {
+    const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
+
+    if (decoded.type !== "refresh") {
+      return res.status(401).json({
+        success: false,
+        statusCode: 401,
+        message: "Invalid refresh token.",
+      });
+    }
+
+    const tokenHash = hashRefreshToken(refreshToken);
+
+    const storedToken = await findRefreshToken(tokenHash);
+
+    if (!storedToken) {
+      return res.status(401).json({
+        success: false,
+        statusCode: 401,
+        message: "Invalid refresh token.",
+      });
+    }
+
+    if (storedToken.revoked_at) {
+      return res.status(401).json({
+        success: false,
+        statusCode: 401,
+        message: "Refresh token has been revoked.",
+      });
+    }
+
+    if (new Date(storedToken.expires_at) <= new Date()) {
+      return res.status(401).json({
+        success: false,
+        statusCode: 401,
+        message: "Refresh token has expired.",
+      });
+    }
+
+    const accessToken = generateAccessToken(storedToken.user_id);
+
+    const newRefreshToken = generateRefreshToken(storedToken.user_id);
+
+    const newRefreshTokenHash = hashRefreshToken(newRefreshToken);
+
+    const newExpiresAt = getRefreshTokenExpiration();
+
+    await rotateRefreshToken(
+      storedToken.id,
+      storedToken.user_id,
+      newRefreshTokenHash,
+      newExpiresAt,
+    );
+
+    res.cookie("refreshToken", newRefreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: getRefreshTokenMaxAge(),
+    });
+
+    return res.status(200).json({
+      success: true,
+      statusCode: 200,
+      message: "Access token refreshed successfully.",
+      data: {
+        accessToken,
+      },
+    });
+  } catch (error) {
+    console.error("ERROR: ", error);
+
+    return res.status(401).json({
+      success: false,
+      statusCode: 401,
+      message: "Invalid or expired refresh token.",
+    });
   }
 };

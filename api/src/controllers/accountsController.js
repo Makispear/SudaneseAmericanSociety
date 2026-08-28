@@ -5,23 +5,21 @@ import {
   publishUserCreatedEvent,
   publishVerificationEmailRequestedEvent,
 } from "../services/eventServices.js";
-
-import {
-  createAccountQuery,
-  addDependants,
-} from "../helpers/SQL/queries/createAccountQuery.js";
-import deleteAccountQuery from "../helpers/SQL/queries/deleteAccountQuery.js";
-import getAllusersQuery from "../helpers/SQL/queries/getAllUsers.js";
 import { validate, validateEmail } from "../helpers/validators.js";
 import {
   generateVerificationToken,
   hashVerificationToken,
 } from "../Utils/emailVerification.js";
-import { createEmailVerificationToken } from "../helpers/SQL/queries/emailVerification.js";
 
 export const getAllUsers = async (req, res) => {
   const client = await pool.connect();
   try {
+    const getAllusersQuery = `
+      SELECT
+      public_id,
+      CONCAT(first_name, ' ', last_name) as full_name 
+      FROM users;
+    `;
     const allUsers = await client.query(getAllusersQuery);
     return res.status(200).json({
       success: true,
@@ -72,6 +70,11 @@ export const createAccount = async (req, res) => {
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
+    const createAccountQuery = `
+      insert into public.users (first_name, last_name, gender, email, phone, membership_type, password_hash)
+      values ($1, $2, $3, $4, $5, $6, $7)
+      returning id, CONCAT(first_name, ' ', last_name) AS full_name, created_at;
+    `;
     const sql_to_create_user = await client.query(createAccountQuery, params);
     const primaryMemberId = sql_to_create_user.rows[0].id;
     const verificationToken = generateVerificationToken();
@@ -104,6 +107,10 @@ export const createAccount = async (req, res) => {
         ];
         // todo: validate (one spouse for example, kids age? optional phone or email.)
         // vaidateDependantsList
+        const addDependants = `
+          insert into public.dependants (primary_member_id, first_name, last_name, gender, dob, relationship)
+          values ($1, $2, $3, $4, $5, $6);
+        `;
         const sql_to_create_dependants = await client.query(
           addDependants,
           childParams,
@@ -212,6 +219,12 @@ export const sendVerificationEmail = async (req, res) => {
     const emailVerificationToken = generateVerificationToken();
     const tokenHash = hashVerificationToken(emailVerificationToken);
 
+    const createEmailVerificationToken = `
+      INSERT INTO public.email_verification_tokens
+      (user_id, token_hash, expires_at)
+      VALUES ($1, $2, NOW() + INTERVAL '15 minutes')
+      RETURNING id, expires_at;
+    `;
     const tokenResult = await client.query(createEmailVerificationToken, [
       user.user_id,
       tokenHash,
@@ -243,18 +256,6 @@ export const sendVerificationEmail = async (req, res) => {
   } finally {
     client.release();
   }
-};
-
-export const deleteAccount = async (req, res) => {
-  const validationResult = validate("deleteAccount", req);
-  if (validationResult) {
-    return res.status(validationResult.statusCode).json(validationResult);
-  }
-
-  const { public_id } = req.body;
-  const params = [public_id];
-
-  const result = pool.query(deleteAccountQuery, params);
 };
 
 export const verifyEmail = async (req, res) => {

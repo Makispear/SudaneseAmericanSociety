@@ -10,7 +10,7 @@ router.post("/sendVerificationEmail", accountsController.sendVerificationEmail);
 // GET ROUTES
 router.get("/getAllUsers", accountsController.getAllUsers);
 // DELETE ROUTES
-router.delete("/deleteAccount", accountsController.deleteAccount);
+// router.delete("/deleteAccount", accountsController.deleteAccount);
 // PUT ROUTES
 
 export default router;
