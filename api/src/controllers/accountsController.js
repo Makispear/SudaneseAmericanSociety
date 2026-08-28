@@ -11,34 +11,6 @@ import {
   hashVerificationToken,
 } from "../Utils/emailVerification.js";
 
-export const getAllUsers = async (req, res) => {
-  const client = await pool.connect();
-  try {
-    const getAllusersQuery = `
-      SELECT
-      public_id,
-      CONCAT(first_name, ' ', last_name) as full_name 
-      FROM users;
-    `;
-    const allUsers = await client.query(getAllusersQuery);
-    return res.status(200).json({
-      success: true,
-      statusCode: 200,
-      message: "Users retrieved successfully.",
-      results: allUsers.rows.length,
-      data: allUsers.rows,
-    });
-  } catch (error) {
-    console.log("error:", error);
-    return res.status(500).json({
-      success: false,
-      statusCode: 500,
-      error: "InternalServerError",
-      message: "An error occurred while fetching users.",
-    });
-  }
-};
-
 export const createAccount = async (req, res) => {
   const validationResult = validate("createAccount", req.body);
   if (validationResult) {

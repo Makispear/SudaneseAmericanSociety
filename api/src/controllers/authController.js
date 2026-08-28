@@ -222,26 +222,28 @@ export const forgotPassword = async (req, res) => {
 
 export const changePassword = async (req, res) => {
   const validationResult = validate("changePassword", req);
+
   if (validationResult) {
     return res.status(validationResult.statusCode).json(validationResult);
   }
 
   const { oldPassword, newPassword } = req.body;
-
   const userId = req.user.sub;
+
   const client = await pool.connect();
+
   try {
     const userResult = await client.query(
       `
-      SELECT id, password_hash
-      FROM public.users
-      WHERE id = $1
+        SELECT id, password_hash
+        FROM public.users
+        WHERE id = $1
       `,
       [userId],
     );
 
-    // check if user exists
     const user = userResult.rows[0];
+
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -250,11 +252,11 @@ export const changePassword = async (req, res) => {
       });
     }
 
-    // if old password is wrong don't let them change the password
     const isOldPasswordValid = await bcrypt.compare(
       oldPassword,
       user.password_hash,
     );
+
     if (!isOldPasswordValid) {
       return res.status(401).json({
         success: false,
@@ -263,11 +265,11 @@ export const changePassword = async (req, res) => {
       });
     }
 
-    // if new password is the same as the old password don't let them change it
     const isSamePassword = await bcrypt.compare(
       newPassword,
       user.password_hash,
     );
+
     if (isSamePassword) {
       return res.status(400).json({
         success: false,
@@ -279,17 +281,22 @@ export const changePassword = async (req, res) => {
     const validatedPassword = validatePassword(newPassword);
     const newPasswordHash = await bcrypt.hash(validatedPassword, 12);
 
-    // update the password in the database
+    // Start transaction
+    await client.query("BEGIN");
+
     const updatedResult = await client.query(
       `
         UPDATE public.users
-        SET password_hash = $1, updated_at = NOW()
+        SET password_hash = $1,
+            updated_at = NOW()
         WHERE id = $2
       `,
       [newPasswordHash, userId],
     );
 
     if (updatedResult.rowCount === 0) {
+      await client.query("ROLLBACK");
+
       return res.status(404).json({
         success: false,
         statusCode: 404,
@@ -297,13 +304,33 @@ export const changePassword = async (req, res) => {
       });
     }
 
+    // Revoke all existing refresh tokens
+    await client.query(
+      `
+        UPDATE refresh_tokens
+        SET revoked_at = NOW()
+        WHERE user_id = $1
+          AND revoked_at IS NULL
+      `,
+      [userId],
+    );
+
+    await client.query("COMMIT");
+
     return res.status(200).json({
       success: true,
       statusCode: 200,
       message: "Password changed successfully.",
     });
   } catch (error) {
-    console.error("ERROR: ", error);
+    try {
+      await client.query("ROLLBACK");
+    } catch (rollbackError) {
+      console.error("ROLLBACK ERROR:", rollbackError);
+    }
+
+    console.error("ERROR:", error);
+
     return res.status(500).json({
       success: false,
       statusCode: 500,
@@ -315,7 +342,6 @@ export const changePassword = async (req, res) => {
 };
 
 export const resetPassword = async (req, res) => {
-  const dateNow = new Date();
   const validationResult = validate("resetPassword", req);
   if (validationResult) {
     return res.status(validationResult.statusCode).json(validationResult);
@@ -323,46 +349,25 @@ export const resetPassword = async (req, res) => {
   const { resetToken, newPassword } = req.body;
   const tokenHash = hashVerificationToken(resetToken);
   const client = await pool.connect();
-  let transactionStarted = false;
+
   try {
+    await client.query("BEGIN");
+
     const tokenResult = await client.query(
       `
-      SELECT id, user_id, expires_at, used_at
-      FROM password_reset_tokens
-      WHERE token_hash = $1 and used_at IS NULL and expires_at > NOW()
+        SELECT id, user_id, expires_at, used_at
+        FROM password_reset_tokens
+        WHERE token_hash = $1
+          AND used_at IS NULL
+          AND expires_at > NOW()
+        LIMIT 1;
       `,
       [tokenHash],
     );
 
-    if (tokenResult.rowCount > 1) {
-      // This should never happen, but if it does, we want to log it and return an error
-      console.error(
-        `Multiple valid password reset tokens found for token hash: ${tokenHash}`,
-      );
-      // set all the existing tokens for this user to expired except the latest one
-      await client.query(
-        `
-        UPDATE password_reset_tokens
-        SET expires_at = NOW()
-        WHERE user_id = $1 and id != $2 and used_at IS NULL and expires_at > NOW()
-        `,
-        [tokenResult.rows[0].user_id, tokenResult.rows[0].id],
-      );
-    }
-
     if (tokenResult.rowCount === 0) {
-      return res.status(400).json({
-        success: false,
-        statusCode: 500,
-        message:
-          "An unexpected error occurred. Please request a new password reset link.",
-      });
-    }
-
-    const resetTokenRecord = tokenResult.rows[0];
-
-    if (!resetTokenRecord) {
       await client.query("ROLLBACK");
+
       return res.status(400).json({
         success: false,
         statusCode: 400,
@@ -370,42 +375,25 @@ export const resetPassword = async (req, res) => {
       });
     }
 
-    if (resetTokenRecord.used_at) {
-      await client.query("ROLLBACK");
-      return res.status(400).json({
-        success: false,
-        statusCode: 400,
-        message: "This password reset link has already been used.",
-      });
-    }
+    const resetTokenRecord = tokenResult.rows[0];
 
-    // Check if the reset token has expired
-    if (dateNow > new Date(resetTokenRecord.expires_at)) {
-      await client.query("ROLLBACK");
-      return res.status(400).json({
-        success: false,
-        statusCode: 400,
-        message: "This password reset link has expired.",
-      });
-    }
-
-    const userId = resetTokenRecord.user_id;
     const validatedPassword = validatePassword(newPassword);
 
     const newPasswordHash = await bcrypt.hash(validatedPassword, 12);
-    await client.query("BEGIN");
-    transactionStarted = true;
+
     const updateResult = await client.query(
       `
         UPDATE public.users
-        SET password_hash = $1, updated_at = NOW()
+        SET password_hash = $1,
+            updated_at = NOW()
         WHERE id = $2
       `,
-      [newPasswordHash, userId],
+      [newPasswordHash, resetTokenRecord.user_id],
     );
 
     if (updateResult.rowCount === 0) {
       await client.query("ROLLBACK");
+
       return res.status(404).json({
         success: false,
         statusCode: 404,
@@ -418,12 +406,14 @@ export const resetPassword = async (req, res) => {
         UPDATE password_reset_tokens
         SET used_at = NOW()
         WHERE id = $1
+          AND used_at IS NULL
       `,
       [resetTokenRecord.id],
     );
 
     if (updateTokenResult.rowCount === 0) {
       await client.query("ROLLBACK");
+
       return res.status(500).json({
         success: false,
         statusCode: 500,
@@ -431,17 +421,28 @@ export const resetPassword = async (req, res) => {
       });
     }
 
+    await client.query(
+      `
+        UPDATE refresh_tokens
+        SET revoked_at = NOW()
+        WHERE user_id = $1
+          AND revoked_at IS NULL
+      `,
+      [resetTokenRecord.user_id],
+    );
+
     await client.query("COMMIT");
+
     return res.status(200).json({
       success: true,
       statusCode: 200,
       message: "Password reset successfully.",
     });
   } catch (error) {
-    if (transactionStarted) {
-      await client.query("ROLLBACK");
-    }
+    await client.query("ROLLBACK");
+
     console.error("ERROR: ", error);
+
     return res.status(500).json({
       success: false,
       statusCode: 500,

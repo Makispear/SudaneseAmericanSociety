@@ -1,7 +1,11 @@
 import pg from "pg";
 const { Pool } = pg;
 import dotenv from "dotenv";
-dotenv.config();
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const currentDirectory = path.dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: path.resolve(currentDirectory, "../../../.env") });
 
 const isLocalhost =
   process.env.DB_HOST === "localhost" || process.env.DB_HOST === "127.0.0.1";

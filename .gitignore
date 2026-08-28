@@ -60,3 +60,8 @@ $RECYCLE.BIN/
 *.njsproj
 *.sln
 *.swp
+
+.env*
+.flaskenv*
+!.env.project
+!.env.vault

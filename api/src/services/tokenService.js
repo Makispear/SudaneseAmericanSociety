@@ -180,3 +180,26 @@ export const getRefreshTokenMaxAge = () => {
 
   return days * 24 * 60 * 60 * 1000;
 };
+
+export const revokeAllRefreshTokensForUser = async (userId) => {
+  const client = await pool.connect();
+
+  try {
+    const query = `
+      UPDATE refresh_tokens
+      SET revoked_at = NOW()
+      WHERE user_id = $1
+        AND revoked_at IS NULL
+      RETURNING id;
+    `;
+
+    const { rows } = await client.query(query, [userId]);
+
+    return rows;
+  } catch (error) {
+    console.error("ERROR:", error);
+    throw error;
+  } finally {
+    client.release();
+  }
+};

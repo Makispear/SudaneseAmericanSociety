@@ -43,11 +43,11 @@ npm install
 
 ## 3) Set up environment variables
 
-Create a local `.env` file in the `api/` folder (or set the same values in your shell environment). The app reads environment variables from `process.env`.
+Create one local `.env` file in the repository root. Both the API and email service load their environment variables from this file.
 
 Example:
 
-```env
+```dotenv
 PORT=5000
 NODE_ENV=development
 
@@ -55,13 +55,18 @@ DB_NAME=sudan_american_society
 DB_USER=postgres
 DB_HOST=localhost
 DB_PORT=5432
-DB_PASSWORD=your_local_postgres_password
+DB_PASSWORD={enter_postgres_password}
 
 AWS_REGION=us-east-1
-AWS_ACCESS_KEY_ID=your_aws_access_key
-AWS_SECRET_ACCESS_KEY=your_aws_secret_key
-EMAIL_FROM=your_verified_sender@example.com
+AWS_ACCESS_KEY_ID={enter_aws_access_key}
+AWS_SECRET_ACCESS_KEY={enter_aws_secret_key}
+EMAIL_FROM={enter_verified_sender_email}
 FRONTEND_URL=http://localhost:3000
+
+JWT_ACCESS_SECRET={enter_access_secret}
+JWT_REFRESH_SECRET={enter_refresh_secret}
+ACCESS_TOKEN_EXPIRES_IN=15m
+REFRESH_TOKEN_EXPIRES_IN=7d
 ```
 
 Notes:
@@ -69,16 +74,6 @@ Notes:
 - If you are using a local PostgreSQL database, set `DB_HOST=localhost` and `DB_PORT=5432`.
 - If you are using a remote database, update the values accordingly.
 - If you are not sending real emails during local development, you can still start the API, but any email-related functionality will require valid AWS SES credentials.
-
-For the email service, create a `.env` file in `email/` as well:
-
-```env
-AWS_REGION=us-east-1
-AWS_ACCESS_KEY_ID=your_aws_access_key
-AWS_SECRET_ACCESS_KEY=your_aws_secret_key
-EMAIL_FROM=your_verified_sender@example.com
-FRONTEND_URL=http://localhost:3000
-```
 
 ## 4) Create the local database
 

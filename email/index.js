@@ -1,8 +1,13 @@
-import "dotenv/config";
+import dotenv from "dotenv";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import {
   sendVerificationEmail,
   sendPasswordResetEmail,
 } from "./src/services/emailService.js";
+
+const currentDirectory = path.dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: path.resolve(currentDirectory, "../.env") });
 
 export const handler = async (event) => {
   console.log("Email event received:");
