@@ -1,4 +1,5 @@
 import express from "express";
+import cors from "cors";
 import helmet from "helmet";
 import cookieParser from "cookie-parser";
 import accountRoutes from "./routes/accounts.js";
@@ -11,7 +12,17 @@ const app = express();
 app.set("trust proxy", 1);
 
 // MIDDLEWARE
-
+app.use(
+  cors({
+    origin: [
+      "http://localhost:5174", // Allows local development
+      "http://sudanseseamericansocietyfe.s3-website-us-east-1.amazonaws.com", // s3 bucket for frontend
+      process.env.FRONTEND_URL, // Allows production domain
+    ],
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    credentials: true,
+  }),
+);
 app.use(cookieParser());
 app.use(helmet());
 app.use(generalRateLimiter);

@@ -1,6 +1,7 @@
 import bcrypt from "bcrypt";
 import { pool } from "../config/db.js";
-
+import fs from "node:fs/promises";
+import path from "node:path";
 import {
   publishUserCreatedEvent,
   publishVerificationEmailRequestedEvent,
@@ -230,6 +231,17 @@ export const sendVerificationEmail = async (req, res) => {
   }
 };
 
+const loadVerificationPage = async (page) => {
+  const htmlPath = path.join(
+    process.cwd(),
+    "src",
+    "templates",
+    "email-verification",
+    page,
+  );
+
+  return fs.readFile(htmlPath, "utf8");
+};
 export const verifyEmail = async (req, res) => {
   const { token } = req.query;
 
@@ -262,11 +274,8 @@ export const verifyEmail = async (req, res) => {
     );
 
     if (tokenResult.rows.length === 0) {
-      return res.status(400).json({
-        success: false,
-        statusCode: 400,
-        message: "Invalid or expired verification link.",
-      });
+      const html = await loadVerificationPage("failure.html");
+      return res.status(400).type("html").send(html);
     }
 
     const verificationToken = tokenResult.rows[0];
@@ -280,11 +289,8 @@ export const verifyEmail = async (req, res) => {
         verificationToken.id,
       );
 
-      return res.status(400).json({
-        success: false,
-        statusCode: 400,
-        message: "Invalid or expired verification link.",
-      });
+      const html = await loadVerificationPage("failure.html");
+      return res.status(400).type("html").send(html);
     }
     const updateUserResult = await client.query(
       `
@@ -302,11 +308,8 @@ export const verifyEmail = async (req, res) => {
         verificationToken.id,
       );
 
-      return res.status(400).json({
-        success: false,
-        statusCode: 400,
-        message: "Invalid or expired verification link.",
-      });
+      const html = await loadVerificationPage("failure.html");
+      return res.status(400).type("html").send(html);
     }
 
     const verifiedUser = updateUserResult.rows[0];
@@ -325,19 +328,13 @@ export const verifyEmail = async (req, res) => {
       "Verification token marked as used. Token ID:",
       verificationToken.id,
     );
-    return res.status(200).json({
-      success: true,
-      statusCode: 200,
-      message: "Email verified successfully.",
-    });
+    const html = await loadVerificationPage("success.html");
+    return res.status(200).type("html").send(html);
   } catch (error) {
     console.error("Email verification error:", error);
 
-    return res.status(500).json({
-      success: false,
-      statusCode: 500,
-      message: "Failed to verify email.",
-    });
+    const html = await loadVerificationPage("failure.html");
+    return res.status(500).type("html").send(html);
   } finally {
     client.release();
   }

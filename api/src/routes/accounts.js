@@ -5,9 +5,9 @@ const router = express.Router();
 
 // POST ROUTES
 router.post("/createAccount", accountsController.createAccount);
-router.post("/verifyEmail", accountsController.verifyEmail);
 router.post("/sendVerificationEmail", accountsController.sendVerificationEmail);
 // GET ROUTES
+router.get("/verifyEmail", accountsController.verifyEmail);
 // DELETE ROUTES
 // router.delete("/deleteAccount", accountsController.deleteAccount);
 // PUT ROUTES

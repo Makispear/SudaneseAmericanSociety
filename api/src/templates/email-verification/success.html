@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Verified - Sudanese American Community</title>
+    <style>
+        :root {
+            --page-max-width: 520px;
+            --color-green: #1a7f3d;
+            --color-green-trans: rgba(26, 127, 61, 0.45);
+            --color-red-accent: rgba(185, 28, 28, 0.42);
+            --color-black: #000000;
+            --color-text-muted: #5a5a5a;
+        }
+
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: #f8faf8;
+            color: var(--color-black);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 24px;
+            box-sizing: border-box;
+        }
+
+        .verification-wrapper {
+            width: 100%;
+            max-width: var(--page-max-width);
+            background: #ffffff;
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            border-top: 4px solid var(--color-green);
+            border-radius: 22px;
+            padding: 40px 32px;
+            box-sizing: border-box;
+            text-align: center;
+            box-shadow: 0 18px 36px rgba(26, 127, 61, 0.08);
+        }
+
+        .verification__eyebrow {
+            margin: 0 0 12px;
+            color: var(--color-green);
+            font-size: 0.78rem;
+            font-weight: 800;
+            letter-spacing: 0.18rem;
+            text-transform: uppercase;
+        }
+
+        .verification__eyebrow::after {
+            content: "";
+            display: block;
+            width: 48px;
+            height: 2px;
+            margin: 10px auto 0;
+            border-radius: 999px;
+            background: var(--color-red-accent);
+        }
+
+        .verification-wrapper h1 {
+            margin: 0 0 16px;
+            color: var(--color-black);
+            font-size: clamp(1.8rem, 3vw, 2.4rem);
+            line-height: 1.15;
+            font-weight: 900;
+        }
+
+        .verification__welcome {
+            margin: 0 0 28px;
+            padding: 18px 20px;
+            background: linear-gradient(
+                135deg,
+                rgba(26, 127, 61, 0.08),
+                rgba(185, 28, 28, 0.04)
+            );
+            border: 1px solid rgba(26, 127, 61, 0.12);
+            border-radius: 16px;
+            text-align: left;
+        }
+
+        .verification__welcome p {
+            margin: 0;
+            color: #1f1f1f;
+            font-size: 0.96rem;
+            line-height: 1.6;
+            font-weight: 500;
+        }
+
+        .verification__btn {
+            display: inline-block;
+            width: 100%;
+            padding: 14px 24px;
+            background: var(--color-green);
+            color: #ffffff;
+            font-size: 1rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.08rem;
+            text-decoration: none;
+            border-radius: 14px;
+            box-sizing: border-box;
+            transition: transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+            box-shadow: 0 6px 20px rgba(26, 127, 61, 0.25);
+        }
+
+        .verification__btn:hover {
+            transform: translateY(-2px);
+            background: #156d33;
+            box-shadow: 0 10px 24px rgba(26, 127, 61, 0.35);
+        }
+
+        .verification__note {
+            margin: 20px 0 0;
+            color: var(--color-text-muted);
+            font-size: 0.88rem;
+            font-style: italic;
+        }
+
+        @media (max-width: 480px) {
+            .verification-wrapper {
+                padding: 32px 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="verification-wrapper">
+        <div class="verification__eyebrow">Sudanese American Community</div>
+        <h1>Account Verified!</h1>
+        
+        <div class="verification__welcome">
+            <p>Your email has been successfully verified. Your account is now fully active, and you can access all community features and resources.</p>
+        </div>
+
+        <a href="https://www.placeholder.com" class="verification__btn">Proceed to Login</a>
+        
+        <p class="verification__note">You can safely close this window or proceed to sign in.</p>
+    </div>
+</body>
+</html>
