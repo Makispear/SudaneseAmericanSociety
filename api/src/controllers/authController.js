@@ -29,7 +29,7 @@ export const login = async (req, res) => {
     return res.status(validationResult.statusCode).json(validationResult);
   }
 
-  const { email, password } = req.body;
+  const { email, password, rememberMe = false } = req.body;
 
   const normalizedEmail = validateEmail(email);
   const client = await pool.connect();
@@ -68,23 +68,26 @@ export const login = async (req, res) => {
       });
     }
 
-    // todo: implement stay signed in option in future
-    // todo: implement refresh token in future
-
-    // generate JWT token
     const accessToken = generateAccessToken(user.id);
     const refreshToken = generateRefreshToken(user.id);
     const refreshTokenHash = hashRefreshToken(refreshToken);
-    const expiresAt = getRefreshTokenExpiration();
 
-    await saveRefreshToken(user.id, refreshTokenHash, expiresAt);
+    const expiresAt = getRefreshTokenExpiration(Boolean(rememberMe));
+
+    await saveRefreshToken(
+      user.id,
+      refreshTokenHash,
+      expiresAt,
+      Boolean(rememberMe),
+    );
+
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "strict",
-      maxAge: getRefreshTokenMaxAge(),
+      maxAge: getRefreshTokenMaxAge(Boolean(rememberMe)),
     });
-    // update last_login_at in db
+
     await client.query(
       `
         UPDATE public.users
@@ -510,6 +513,8 @@ export const refreshToken = async (req, res) => {
 
     const newRefreshTokenHash = hashRefreshToken(newRefreshToken);
 
+    const isRemembered = storedToken.remember_me;
+
     const newExpiresAt = getRefreshTokenExpiration();
 
     await rotateRefreshToken(
@@ -517,13 +522,14 @@ export const refreshToken = async (req, res) => {
       storedToken.user_id,
       newRefreshTokenHash,
       newExpiresAt,
+      isRemembered,
     );
 
     res.cookie("refreshToken", newRefreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "strict",
-      maxAge: getRefreshTokenMaxAge(),
+      maxAge: getRefreshTokenMaxAge(isRemembered),
     });
 
     return res.status(200).json({

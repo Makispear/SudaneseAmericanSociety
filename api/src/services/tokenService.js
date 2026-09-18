@@ -31,17 +31,27 @@ export const hashRefreshToken = (token) => {
   return crypto.createHash("sha256").update(token).digest("hex");
 };
 
-export const saveRefreshToken = async (userId, tokenHash, expiresAt) => {
+export const saveRefreshToken = async (
+  userId,
+  tokenHash,
+  expiresAt,
+  rememberMe = false,
+) => {
   const client = await pool.connect();
 
   try {
     const query = `
-      INSERT INTO refresh_tokens (user_id, token_hash, expires_at)
-      VALUES ($1, $2, $3)
-      RETURNING id, user_id, expires_at, created_at;
+      INSERT INTO refresh_tokens (user_id, token_hash, expires_at, remember_me)
+      VALUES ($1, $2, $3, $4)
+      RETURNING id, user_id, expires_at, remember_me, created_at;
     `;
 
-    const { rows } = await client.query(query, [userId, tokenHash, expiresAt]);
+    const { rows } = await client.query(query, [
+      userId,
+      tokenHash,
+      expiresAt,
+      rememberMe,
+    ]);
 
     return rows[0];
   } catch (error) {
@@ -62,7 +72,8 @@ export const findRefreshToken = async (tokenHash) => {
         user_id,
         token_hash,
         expires_at,
-        revoked_at
+        revoked_at,
+        remember_me
       FROM refresh_tokens
       WHERE token_hash = $1;
     `;
@@ -100,8 +111,10 @@ export const revokeRefreshToken = async (tokenId) => {
   }
 };
 
-export const getRefreshTokenExpiration = () => {
-  const expiresIn = process.env.REFRESH_TOKEN_EXPIRES_IN;
+export const getRefreshTokenMaxAge = (isRemembered = false) => {
+  const expiresIn = isRemembered
+    ? process.env.REFRESH_TOKEN_EXPIRES_IN_REMEMBERED
+    : process.env.REFRESH_TOKEN_EXPIRES_IN;
 
   if (!expiresIn.endsWith("d")) {
     throw new Error("REFRESH_TOKEN_EXPIRES_IN must be specified in days.");
@@ -113,7 +126,12 @@ export const getRefreshTokenExpiration = () => {
     throw new Error("Invalid REFRESH_TOKEN_EXPIRES_IN.");
   }
 
-  return new Date(Date.now() + days * 24 * 60 * 60 * 1000);
+  return days * 24 * 60 * 60 * 1000;
+};
+
+export const getRefreshTokenExpiration = (isRemembered = false) => {
+  const maxAge = getRefreshTokenMaxAge(isRemembered);
+  return new Date(Date.now() + maxAge);
 };
 
 export const rotateRefreshToken = async (
@@ -121,6 +139,7 @@ export const rotateRefreshToken = async (
   userId,
   newTokenHash,
   expiresAt,
+  rememberMe = false,
 ) => {
   const client = await pool.connect();
 
@@ -140,16 +159,18 @@ export const rotateRefreshToken = async (
       INSERT INTO refresh_tokens (
         user_id,
         token_hash,
-        expires_at
+        expires_at,
+        remember_me
       )
-      VALUES ($1, $2, $3)
-      RETURNING id, user_id, expires_at, created_at;
+      VALUES ($1, $2, $3, $4)
+      RETURNING id, user_id, expires_at, remember_me, created_at;
     `;
 
     const { rows } = await client.query(saveQuery, [
       userId,
       newTokenHash,
       expiresAt,
+      rememberMe,
     ]);
 
     await client.query("COMMIT");
@@ -163,22 +184,6 @@ export const rotateRefreshToken = async (
   } finally {
     client.release();
   }
-};
-
-export const getRefreshTokenMaxAge = () => {
-  const expiresIn = process.env.REFRESH_TOKEN_EXPIRES_IN;
-
-  if (!expiresIn.endsWith("d")) {
-    throw new Error("REFRESH_TOKEN_EXPIRES_IN must be specified in days.");
-  }
-
-  const days = Number.parseInt(expiresIn, 10);
-
-  if (!Number.isInteger(days) || days <= 0) {
-    throw new Error("Invalid REFRESH_TOKEN_EXPIRES_IN.");
-  }
-
-  return days * 24 * 60 * 60 * 1000;
 };
 
 export const revokeAllRefreshTokensForUser = async (userId) => {
