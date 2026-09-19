@@ -21,7 +21,10 @@ import {
   hashVerificationToken,
 } from "../Utils/emailVerification.js";
 import { pool } from "../config/db.js";
-import { publishUserPasswordResetEvent } from "../services/eventServices.js";
+import {
+  publishUserPasswordResetEvent,
+  publishUserCreatedEvent,
+} from "../services/eventServices.js";
 
 export const login = async (req, res) => {
   const validationResult = validate("login", req);
@@ -61,10 +64,54 @@ export const login = async (req, res) => {
     }
 
     if (!user.is_email_verified) {
+      // 1. Check if there is still an active, unexpired token for this user (getting the most recent one)
+      const existingTokenResult = await client.query(
+        `
+          SELECT expires_at 
+          FROM public.email_verification_tokens 
+          WHERE user_id = $1 AND expires_at > NOW()
+          LIMIT 1;
+        `,
+        [user.id],
+      );
+
+      const activeToken = existingTokenResult.rows[0];
+
+      if (activeToken) {
+        // A valid link was already sent recently and hasn't expired yet.
+        return res.status(403).json({
+          success: false,
+          statusCode: 403,
+          message:
+            "Your email is not verified. A verification link was already sent to your inbox recently. Please check your email (including spam).",
+        });
+      }
+
+      // 2. All previous tokens are expired.
+      // Insert a brand-new token.
+      const verificationToken = generateVerificationToken();
+      const tokenHash = hashVerificationToken(verificationToken);
+      const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 mins
+
+      await client.query(
+        `
+          INSERT INTO public.email_verification_tokens (user_id, token_hash, expires_at)
+          VALUES ($1, $2, $3)
+        `,
+        [user.id, tokenHash, expiresAt],
+      );
+
+      await publishUserCreatedEvent({
+        userId: user.id,
+        email: normalizedEmail,
+        verificationToken,
+      });
+
       return res.status(403).json({
         success: false,
         statusCode: 403,
-        message: "Please verify your email before logging in.",
+        message:
+          "Your previous verification link has expired. We just sent a brand-new verification link to your inbox.",
       });
     }
 
